@@ -247,7 +247,7 @@ with tab1:
 # --- Tab 2: Best QWERKY Bets ---
 with tab2:
     st.header("Best QWERKY Bets")
-    st.write("Get best bets according to advanced statistical analysis (powered by OpenAI).")
+    st.write("Get best bets according to advanced statistical analysis (powered by QWERK).")
     if st.button("Analyze Best Bets", key="analyze_bets") and openai_api_key:
         prompt = (
             f"You are an expert NFL betting analyst with access to 15 years of NFL data. "
@@ -266,7 +266,7 @@ with tab2:
             except Exception as e:
                 st.error(f"LLM Analysis error: {e}")
     elif not openai_api_key:
-        st.info("Enter your OpenAI API key above to enable advanced analysis.")
+        st.info("Enter your QWERK key above to enable advanced analysis.")
 
 # --- Tab 3: Team Commentary ---
 with tab3:
@@ -294,6 +294,6 @@ with tab3:
             except Exception as e:
                 st.error(f"LLM Commentary error: {e}")
     elif not openai_api_key:
-        st.info("Enter your OpenAI API key above to enable commentary.")
+        st.info("Enter your QWERK API key above to enable commentary.")
 
 st.caption("Odds data provided by The Odds API. Advanced analysis powered by the QWERK engine.")

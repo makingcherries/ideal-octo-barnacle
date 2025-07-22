@@ -4,8 +4,6 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime, timezone
 
-# Optional: import google.generativeai as genai if you have Gemini, or remove if not using LLM at all
-
 # --- Streamlit Theming (Light/NFL Style) ---
 st.set_page_config(page_title="Welcome to the QWERK", layout="wide", initial_sidebar_state="expanded")
 NFL_LIGHT = "#FAFAFA"
@@ -60,7 +58,17 @@ st.title("Welcome to the QWERK")
 # --- API KEYS ---
 odds_api_key = st.secrets["the_odds_api"]["key"]
 rapid_api_key = st.secrets.get("rapid_api_key")
-# Remove Gemini/Bing API key usage and related logic
+gemini_api_key = st.secrets.get("gemini_api_key")
+gemini_model = None
+
+if gemini_api_key:
+    import google.generativeai as genai
+    genai.configure(api_key=gemini_api_key)
+    try:
+        gemini_model = genai.GenerativeModel("models/gemini-1.5-flash")
+    except Exception as e:
+        st.error(f"Error loading Gemini model: {e}")
+        gemini_model = None
 
 CURRENT_YEAR = datetime.now().year
 NFL_WEEKS = list(range(1, 19))
@@ -239,8 +247,8 @@ def game_contexts(odds_df, stats_data):
 
 games_for_prompt = game_contexts(odds_df, stats_data)
 
-tab1, tab2, tab3 = st.tabs(
-    ["Current Odds", "Team Commentary", "Raw Data"]
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["Current Odds", "Best QWERKY Bets", "Team Commentary", "Top 5 Bets"]
 )
 
 with tab1:
@@ -293,25 +301,109 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
+    st.header("Best QWERKY Bets")
+    st.write("Get best bets according to advanced statistical analysis (powered by Gemini 1.5 Flash).")
+    if st.button("Analyze Best Bets", key="analyze_bets") and gemini_api_key and gemini_model:
+        try:
+            odds_summary = odds_df[['Home', 'Away', 'Market', 'Team', 'Price', 'Point']].to_markdown(index=False)
+        except Exception:
+            odds_summary = odds_df.head(10).to_markdown(index=False)
+        stats_summary = condense_stats(stats_data) if stats_data else "No advanced stats provided."
+        prompt = f"""You are an expert NFL betting analyst with access to NFL odds for week {selected_week} and 15 years of team statistics from RapidAPI.
+Below are the odds for this week and a summary of historical team performance:
+---
+NFL Odds Table:
+{odds_summary}
+---
+15 Year NFL Team Statistics Summary:
+{stats_summary}
+---
+Based on this data, recommend the three best bets for this week (one against the spread, one over/under, one moneyline) and provide detailed rationale for each pick. Use historical stats, this week's lines, and matchup context for your reasoning."""
+        with st.spinner("Analyzing best bets..."):
+            try:
+                response = gemini_model.generate_content(prompt)
+                analysis = response.text
+                st.markdown(analysis)
+            except Exception as e:
+                st.error(f"Gemini Analysis error: {e}")
+    elif not gemini_api_key:
+        st.info("Configure your Gemini API key in Streamlit secrets to enable advanced analysis.")
+
+with tab3:
     st.header("Team Commentary")
     commentary_team = st.selectbox("Select Team for Commentary:", team_options, key="commentary_team")
     team_color = TEAM_COLORS.get(commentary_team, NFL_ACCENT)
     st.markdown(
-        f"<h4 style='color:{team_color};'>Stats for {commentary_team} (Week {selected_week}):</h4>",
+        f"<h4 style='color:{team_color};'>5 Reasons to Bet on {commentary_team} (Week {selected_week}):</h4>",
         unsafe_allow_html=True
     )
-    if stats_data and "teams" in stats_data:
-        stats_lookup = {team['name']: team for team in stats_data['teams']}
-        team_stats = stats_lookup.get(commentary_team, {})
-        st.write(team_stats)
-    else:
-        st.write("No stats available for this team.")
+    if st.button("Generate Commentary", key="generate_commentary") and gemini_api_key and gemini_model:
+        prompt = (
+            f"List and explain 5 compelling reasons, based on 15 years of NFL data and current week {selected_week} odds, "
+            f"why betting on {commentary_team} is a strong choice for this week. Reference advanced trends, "
+            f"matchups, and relevant statistics."
+        )
+        with st.spinner("Generating commentary..."):
+            try:
+                response = gemini_model.generate_content(prompt)
+                commentary = response.text
+                st.markdown(commentary)
+            except Exception as e:
+                st.error(f"Gemini Commentary error: {e}")
+    elif not gemini_api_key:
+        st.info("Configure your Gemini API key in Streamlit secrets to enable commentary.")
 
-with tab3:
-    st.header("Raw Data (for debugging or reference)")
-    with st.expander("Show Odds Table"):
-        st.dataframe(odds_df, use_container_width=True)
-    with st.expander("Show Weekly Stats (Raw)"):
-        st.write(stats_data)
+with tab4:
+    st.header(f"Gemini Analysis: Top 5 NFL Bets for Week {selected_week}")
+    st.write("Gemini will analyze all games and recommend the top 5 bets, factoring in odds and stats automatically.")
 
-st.caption("Odds by The Odds API. Weekly stats via RapidAPI.")
+    if st.button("Analyze NFL Games & Recommend Top 5 Bets", key="top5bets") and gemini_api_key and gemini_model:
+        full_game_context = ""
+        for g in games_for_prompt:
+            full_game_context += (
+                f"Game: {g['game']} (Kickoff: {g['kickoff']})\n"
+                f"Home stats: {g['home_stats']}\n"
+                f"Away stats: {g['away_stats']}\n"
+                f"Odds:\n"
+            )
+            for o in g["odds"]:
+                full_game_context += f"  Market: {o['Market']}, Team: {o['Team']}, Price: {o['Price']}, Point: {o['Point']}, Bookmaker: {o['Bookmaker']}\n"
+            full_game_context += "\n"
+
+        prompt = f"""
+You are an advanced NFL betting analyst with access to the latest odds and 15 years of NFL statistics.
+Below is this week's data for all NFL games, including odds and key team statistics.
+
+---
+{full_game_context}
+---
+
+Instructions:
+1. For each game, provide a concise advanced analysis (strengths, weaknesses, trends, value in lines, etc.), referencing the given stats and odds.
+2. After analyzing all games, select the 5 best games to bet on this week (can be spread, moneyline, or over/under).
+3. For each of the top 5 bets, state clearly which bet to make (e.g. "Bears +3.5", "Over 48.0 in Eagles vs Cowboys") and provide a detailed rationale for why this is one of the best bets, using both the odds and stats provided.
+4. Make sure the analysis is self-contained and actionable.
+
+Output format:
+- Per-game analysis
+- Top 5 Bets section: List each bet, the game, and a rationale paragraph for each.
+
+Begin your analysis below.
+"""
+        with st.spinner("Gemini is analyzing all NFL games and picking the top 5 bets..."):
+            try:
+                response = gemini_model.generate_content(prompt)
+                analysis = response.text
+                st.markdown(analysis)
+            except Exception as e:
+                st.error(f"Gemini Top 5 Bets error: {e}")
+    elif not gemini_api_key:
+        st.info("Configure your Gemini API key in Streamlit secrets to enable advanced analysis.")
+
+st.header("Raw Data (for debugging or reference)")
+with st.expander("Show Odds Table"):
+    st.dataframe(odds_df, use_container_width=True)
+with st.expander("Show Weekly Stats (Raw)"):
+    st.write(stats_data)
+
+st.caption("Odds by The Odds API. Weekly stats via RapidAPI. Analysis powered by Gemini 1.5 Flash.")

@@ -6,23 +6,24 @@ from datetime import datetime, timezone
 
 import google.generativeai as genai
 
-# --- Streamlit Theming (NFL Style) ---
+# --- Streamlit Theming (Light/NFL Style) ---
 st.set_page_config(page_title="Welcome to the QWERK", layout="wide", initial_sidebar_state="expanded")
-NFL_DARK = "#101820"
+NFL_LIGHT = "#FAFAFA"
 NFL_ACCENT = "#013369"
 NFL_RED = "#D50A0A"
 NFL_SILVER = "#A5ACAF"
 NFL_WHITE = "#FFFFFF"
+NFL_BLACK = "#101820"
 
 st.markdown(
     f"""
     <style>
         .stApp {{
-            background-color: {NFL_DARK};
-            color: {NFL_WHITE};
+            background-color: {NFL_LIGHT};
+            color: {NFL_BLACK};
         }}
         .css-1v0mbdj, .css-10trblm, .css-1d391kg, .st-bb, .st-at, .st-cq, .st-ce {{
-            color: {NFL_WHITE} !important;
+            color: {NFL_BLACK} !important;
         }}
         .stButton > button {{
             background-color: {NFL_ACCENT};
@@ -31,9 +32,9 @@ st.markdown(
             border: 2px solid {NFL_SILVER};
             font-weight: bold;
         }}
-        .stSelectbox > div {{background: "#232b2b"}}
+        .stSelectbox > div {{background: "#FAFAFA"}}
         .stDataFrame, .stPlotlyChart {{
-            background-color: {NFL_DARK} !important;
+            background-color: {NFL_WHITE} !important;
         }}
         h1, h2, h3, h4, h5, h6 {{
             color: {NFL_ACCENT} !important;
@@ -44,7 +45,12 @@ st.markdown(
             color: {NFL_WHITE} !important;
         }}
         .css-18e3th9 {{
-            background-color: {NFL_DARK} !important;
+            background-color: {NFL_WHITE} !important;
+        }}
+        /* Field backgrounds */
+        .stTextInput>div>div>input, .stTextArea>div>textarea {{
+            background-color: {NFL_WHITE} !important;
+            color: {NFL_BLACK} !important;
         }}
     </style>
     """, unsafe_allow_html=True,
@@ -54,9 +60,9 @@ st.title("Welcome to the QWERK")
 
 # --- API KEYS ---
 odds_api_key = st.secrets["the_odds_api"]["key"]
-rapid_api_key = st.secrets.get("rapid_api_key") or st.text_input("Enter your RapidAPI key for NFL stats:", type="password")
-gemini_api_key = st.secrets.get("gemini_api_key") or st.text_input("Enter your Gemini API key for analysis:", type="password")
-bing_api_key = st.secrets.get("bing_api_key") or st.text_input("Enter your Bing Search API key for news:", type="password")
+rapid_api_key = st.secrets.get("rapid_api_key")
+gemini_api_key = st.secrets.get("gemini_api_key")
+bing_api_key = st.secrets.get("bing_api_key")
 gemini_model = None
 
 if gemini_api_key:
@@ -146,7 +152,6 @@ if not odds_data:
 if stats_error and rapid_api_key:
     st.warning(f"RapidAPI Stats error: {stats_error}")
 
-# --- NFL Team Colors (add all as you wish) ---
 TEAM_COLORS = {
     "Arizona Cardinals": "#97233F",
     "Atlanta Falcons": "#A71930",
@@ -182,7 +187,6 @@ TEAM_COLORS = {
     "Washington Commanders": "#5A1414",
 }
 
-# --- Data Processing ---
 def get_approx_week(game_date):
     season_start = datetime(CURRENT_YEAR, 9, 2, tzinfo=timezone.utc)
     return 1 + ((game_date - season_start).days // 7)
@@ -287,12 +291,10 @@ def summarize_news(news_data):
 
 news_summary = summarize_news(news_data)
 
-# --- Streamlit Tabs ---
 tab1, tab2, tab3, tab4 = st.tabs(
     ["Current Odds", "Best QWERKY Bets", "Team Commentary", "Top 5 Bets"]
 )
 
-# --- Tab 1: Current Odds ---
 with tab1:
     st.header("Current Odds")
     selected_team = st.selectbox(
@@ -342,7 +344,6 @@ with tab1:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-# --- Tab 2: Best QWERKY Bets ---
 with tab2:
     st.header("Best QWERKY Bets")
     st.write("Get best bets according to advanced statistical analysis (powered by Gemini 1.5 Flash).")
@@ -370,9 +371,8 @@ Based on this data, recommend the three best bets for this week (one against the
             except Exception as e:
                 st.error(f"Gemini Analysis error: {e}")
     elif not gemini_api_key:
-        st.info("Enter your Gemini API key above to enable advanced analysis.")
+        st.info("Configure your Gemini API key in Streamlit secrets to enable advanced analysis.")
 
-# --- Tab 3: Team Commentary ---
 with tab3:
     st.header("Team Commentary")
     commentary_team = st.selectbox("Select Team for Commentary:", team_options, key="commentary_team")
@@ -395,9 +395,8 @@ with tab3:
             except Exception as e:
                 st.error(f"Gemini Commentary error: {e}")
     elif not gemini_api_key:
-        st.info("Enter your Gemini API key above to enable commentary.")
+        st.info("Configure your Gemini API key in Streamlit secrets to enable commentary.")
 
-# --- Tab 4: Top 5 Bets (news auto-integration) ---
 with tab4:
     st.header(f"Gemini Analysis: Top 5 NFL Bets for Week {selected_week}")
     st.write("Gemini will analyze all games and recommend the top 5 bets, factoring in odds, stats, and latest news/discussion automatically.")
@@ -449,7 +448,7 @@ Begin your analysis below.
             except Exception as e:
                 st.error(f"Gemini Top 5 Bets error: {e}")
     elif not gemini_api_key:
-        st.info("Enter your Gemini API key above to enable advanced analysis.")
+        st.info("Configure your Gemini API key in Streamlit secrets to enable advanced analysis.")
 
 st.header("Raw Data (for debugging or reference)")
 with st.expander("Show Odds Table"):

@@ -2,8 +2,8 @@ import streamlit as st
 import requests
 import pandas as pd
 import plotly.express as px
-import openai
-from datetime import datetime, timedelta, timezone  # Updated import to include timezone
+from datetime import datetime, timedelta, timezone
+import google.generativeai as genai  # Gemini import
 
 # --- Streamlit Theming (NFL Style) ---
 st.set_page_config(page_title="Welcome to the QWERK", layout="wide", initial_sidebar_state="expanded")
@@ -53,9 +53,10 @@ st.title("Welcome to the QWERK")
 
 # --- API KEYS ---
 odds_api_key = st.secrets["the_odds_api"]["key"]
-openai_api_key = st.secrets.get("openai_api_key") or st.text_input("Enter your QWERK key for advanced analysis:", type="password")
-if openai_api_key:
-    client = openai.OpenAI(api_key=openai_api_key)  # Updated per OpenAI >=1.0.0
+gemini_api_key = st.secrets.get("gemini_api_key") or st.text_input("Enter your Gemini API key for advanced analysis:", type="password")
+if gemini_api_key:
+    genai.configure(api_key=gemini_api_key)
+    gemini_model = genai.GenerativeModel("gemini-pro")
 
 # --- NFL Weeks ---
 CURRENT_YEAR = datetime.now().year
@@ -128,7 +129,7 @@ TEAM_COLORS = {
 # --- Data Processing ---
 def get_approx_week(game_date):
     # Approximate NFL week based on the start of September (UTC-aware)
-    season_start = datetime(CURRENT_YEAR, 9, 2, tzinfo=timezone.utc)  # CHANGED: Added tzinfo=timezone.utc
+    season_start = datetime(CURRENT_YEAR, 9, 2, tzinfo=timezone.utc)
     return 1 + ((game_date - season_start).days // 7)
 
 games_list = []
@@ -247,8 +248,8 @@ with tab1:
 # --- Tab 2: Best QWERKY Bets ---
 with tab2:
     st.header("Best QWERKY Bets")
-    st.write("Get best bets according to advanced statistical analysis (powered by QWERK).")
-    if st.button("Analyze Best Bets", key="analyze_bets") and openai_api_key:
+    st.write("Get best bets according to advanced statistical analysis (powered by Gemini).")
+    if st.button("Analyze Best Bets", key="analyze_bets") and gemini_api_key:
         prompt = (
             f"You are an expert NFL betting analyst with access to 15 years of NFL data. "
             f"Analyze the current NFL week {selected_week} odds and provide the three best bets: "
@@ -257,16 +258,13 @@ with tab2:
         )
         with st.spinner("Analyzing best bets..."):
             try:
-                response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": "system", "content": prompt}]
-                )
-                analysis = response.choices[0].message.content
+                response = gemini_model.generate_content(prompt)
+                analysis = response.text
                 st.markdown(analysis)
             except Exception as e:
-                st.error(f"LLM Analysis error: {e}")
-    elif not openai_api_key:
-        st.info("Enter your QWERK key above to enable advanced analysis.")
+                st.error(f"Gemini Analysis error: {e}")
+    elif not gemini_api_key:
+        st.info("Enter your Gemini API key above to enable advanced analysis.")
 
 # --- Tab 3: Team Commentary ---
 with tab3:
@@ -277,7 +275,7 @@ with tab3:
         f"<h4 style='color:{team_color};'>5 Reasons to Bet on {commentary_team} (Week {selected_week}):</h4>",
         unsafe_allow_html=True
     )
-    if st.button("Generate Commentary", key="generate_commentary") and openai_api_key:
+    if st.button("Generate Commentary", key="generate_commentary") and gemini_api_key:
         prompt = (
             f"List and explain 5 compelling reasons, based on 15 years of NFL data and current week {selected_week} odds, "
             f"why betting on {commentary_team} is a strong choice for this week. Reference advanced trends, "
@@ -285,15 +283,12 @@ with tab3:
         )
         with st.spinner("Generating commentary..."):
             try:
-                response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": "system", "content": prompt}]
-                )
-                commentary = response.choices[0].message.content
+                response = gemini_model.generate_content(prompt)
+                commentary = response.text
                 st.markdown(commentary)
             except Exception as e:
-                st.error(f"LLM Commentary error: {e}")
-    elif not openai_api_key:
-        st.info("Enter your QWERK API key above to enable commentary.")
+                st.error(f"Gemini Commentary error: {e}")
+    elif not gemini_api_key:
+        st.info("Enter your Gemini API key above to enable commentary.")
 
 st.caption("Odds data provided by The Odds API. Advanced analysis powered by the QWERK engine.")

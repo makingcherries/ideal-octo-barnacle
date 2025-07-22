@@ -53,7 +53,7 @@ st.title("Welcome to the QWERK")
 
 # --- API KEYS ---
 odds_api_key = st.secrets["the_odds_api"]["key"]
-gemini_api_key = st.secrets.get("gemini_api_key") or st.text_input("Enter your Gemini API key for advanced analysis:", type="password")
+gemini_api_key = st.secrets.get("gemini_api_key") or st.text_input("Enter your QWERKY key for advanced analysis:", type="password")
 if gemini_api_key:
     genai.configure(api_key=gemini_api_key)
     gemini_model = genai.GenerativeModel("gemini-pro")
@@ -248,7 +248,7 @@ with tab1:
 # --- Tab 2: Best QWERKY Bets ---
 with tab2:
     st.header("Best QWERKY Bets")
-    st.write("Get best bets according to advanced statistical analysis (powered by Gemini).")
+    st.write("Get best bets according to advanced statistical analysis (powered by QWERKY).")
     if st.button("Analyze Best Bets", key="analyze_bets") and gemini_api_key:
         prompt = (
             f"You are an expert NFL betting analyst with access to 15 years of NFL data. "
@@ -264,7 +264,7 @@ with tab2:
             except Exception as e:
                 st.error(f"Gemini Analysis error: {e}")
     elif not gemini_api_key:
-        st.info("Enter your Gemini API key above to enable advanced analysis.")
+        st.info("Enter your QWERKY API key above to enable advanced analysis.")
 
 # --- Tab 3: Team Commentary ---
 with tab3:
@@ -289,6 +289,6 @@ with tab3:
             except Exception as e:
                 st.error(f"Gemini Commentary error: {e}")
     elif not gemini_api_key:
-        st.info("Enter your Gemini API key above to enable commentary.")
+        st.info("Enter your QWERKY key above to enable commentary.")
 
 st.caption("Odds data provided by The Odds API. Advanced analysis powered by the QWERK engine.")

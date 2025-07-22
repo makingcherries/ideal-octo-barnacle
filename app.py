@@ -2,9 +2,8 @@ import streamlit as st
 import requests
 import pandas as pd
 import plotly.express as px
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-# Gemini (Google Generative AI) import
 import google.generativeai as genai
 
 # --- Streamlit Theming (NFL Style) ---
@@ -60,19 +59,9 @@ gemini_model = None
 
 if gemini_api_key:
     genai.configure(api_key=gemini_api_key)
-    # List models and pick the best (most capable) for content generation
     try:
-        # Retrieve available models and pick the best generative one
-        available_models = [m for m in genai.list_models()]
-        # Filter for models that support generate_content
-        generative_models = [m for m in available_models if hasattr(m, "supported_generation_methods") and "generateContent" in getattr(m, "supported_generation_methods", [])]
-        # Fallback: Use known best model name if none returned by API
-        if generative_models:
-            best_model_name = generative_models[0].name
-        else:
-            # Use the latest known public model name
-            best_model_name = "models/gemini-1.5-pro-latest"
-        gemini_model = genai.GenerativeModel(best_model_name)
+        # Use the current fast and supported Gemini model
+        gemini_model = genai.GenerativeModel("models/gemini-1.5-flash")
     except Exception as e:
         st.error(f"Error loading Gemini model: {e}")
         gemini_model = None
@@ -267,7 +256,7 @@ with tab1:
 # --- Tab 2: Best QWERKY Bets ---
 with tab2:
     st.header("Best QWERKY Bets")
-    st.write("Get best bets according to advanced statistical analysis (powered by Gemini).")
+    st.write("Get best bets according to advanced statistical analysis (powered by Gemini 1.5 Flash).")
     if st.button("Analyze Best Bets", key="analyze_bets") and gemini_api_key and gemini_model:
         prompt = (
             f"You are an expert NFL betting analyst with access to 15 years of NFL data. "

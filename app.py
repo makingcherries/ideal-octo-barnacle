@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import plotly.express as px
 import openai
-from datetime import datetime, timedelta, timezone  # <--- Added timezone here
+from datetime import datetime, timedelta, timezone  # Updated import to include timezone
 
 # --- Streamlit Theming (NFL Style) ---
 st.set_page_config(page_title="Welcome to the QWERK", layout="wide", initial_sidebar_state="expanded")
@@ -52,11 +52,10 @@ st.markdown(
 st.title("Welcome to the QWERK")
 
 # --- API KEYS ---
-# Use Streamlit secrets for security. See .streamlit/secrets.toml for details.
 odds_api_key = st.secrets["the_odds_api"]["key"]
 openai_api_key = st.secrets.get("openai_api_key") or st.text_input("Enter your OpenAI API key for advanced analysis:", type="password")
 if openai_api_key:
-    openai.api_key = openai_api_key
+    client = openai.OpenAI(api_key=openai_api_key)  # Updated per OpenAI >=1.0.0
 
 # --- NFL Weeks ---
 CURRENT_YEAR = datetime.now().year
@@ -127,10 +126,9 @@ TEAM_COLORS = {
 }
 
 # --- Data Processing ---
-# HIGHLIGHTED CHANGE BELOW
 def get_approx_week(game_date):
     # Approximate NFL week based on the start of September (UTC-aware)
-    season_start = datetime(CURRENT_YEAR, 9, 2, tzinfo=timezone.utc)  # <--- CHANGED: Added tzinfo=timezone.utc
+    season_start = datetime(CURRENT_YEAR, 9, 2, tzinfo=timezone.utc)  # CHANGED: Added tzinfo=timezone.utc
     return 1 + ((game_date - season_start).days // 7)
 
 games_list = []
@@ -259,7 +257,7 @@ with tab2:
         )
         with st.spinner("Analyzing best bets..."):
             try:
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": "system", "content": prompt}]
                 )
@@ -287,7 +285,7 @@ with tab3:
         )
         with st.spinner("Generating commentary..."):
             try:
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": "system", "content": prompt}]
                 )

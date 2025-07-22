@@ -53,7 +53,7 @@ st.title("Welcome to the QWERK")
 
 # --- API KEYS ---
 odds_api_key = st.secrets["the_odds_api"]["key"]
-openai_api_key = st.secrets.get("openai_api_key") or st.text_input("Enter your OpenAI API key for advanced analysis:", type="password")
+openai_api_key = st.secrets.get("openai_api_key") or st.text_input("Enter your QWERK key for advanced analysis:", type="password")
 if openai_api_key:
     client = openai.OpenAI(api_key=openai_api_key)  # Updated per OpenAI >=1.0.0
 

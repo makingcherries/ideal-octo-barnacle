@@ -3,7 +3,9 @@ import requests
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta, timezone
-import google.generativeai as genai  # Gemini import
+
+# Gemini (Google Generative AI) import
+import google.generativeai as genai
 
 # --- Streamlit Theming (NFL Style) ---
 st.set_page_config(page_title="Welcome to the QWERK", layout="wide", initial_sidebar_state="expanded")
@@ -53,10 +55,27 @@ st.title("Welcome to the QWERK")
 
 # --- API KEYS ---
 odds_api_key = st.secrets["the_odds_api"]["key"]
-gemini_api_key = st.secrets.get("gemini_api_key") or st.text_input("Enter your QWERKY key for advanced analysis:", type="password")
+gemini_api_key = st.secrets.get("gemini_api_key") or st.text_input("Enter your Gemini API key for advanced analysis:", type="password")
+gemini_model = None
+
 if gemini_api_key:
     genai.configure(api_key=gemini_api_key)
-    gemini_model = genai.GenerativeModel("gemini-pro")
+    # List models and pick the best (most capable) for content generation
+    try:
+        # Retrieve available models and pick the best generative one
+        available_models = [m for m in genai.list_models()]
+        # Filter for models that support generate_content
+        generative_models = [m for m in available_models if hasattr(m, "supported_generation_methods") and "generateContent" in getattr(m, "supported_generation_methods", [])]
+        # Fallback: Use known best model name if none returned by API
+        if generative_models:
+            best_model_name = generative_models[0].name
+        else:
+            # Use the latest known public model name
+            best_model_name = "models/gemini-1.5-pro-latest"
+        gemini_model = genai.GenerativeModel(best_model_name)
+    except Exception as e:
+        st.error(f"Error loading Gemini model: {e}")
+        gemini_model = None
 
 # --- NFL Weeks ---
 CURRENT_YEAR = datetime.now().year
@@ -248,8 +267,8 @@ with tab1:
 # --- Tab 2: Best QWERKY Bets ---
 with tab2:
     st.header("Best QWERKY Bets")
-    st.write("Get best bets according to advanced statistical analysis (powered by QWERKY).")
-    if st.button("Analyze Best Bets", key="analyze_bets") and gemini_api_key:
+    st.write("Get best bets according to advanced statistical analysis (powered by Gemini).")
+    if st.button("Analyze Best Bets", key="analyze_bets") and gemini_api_key and gemini_model:
         prompt = (
             f"You are an expert NFL betting analyst with access to 15 years of NFL data. "
             f"Analyze the current NFL week {selected_week} odds and provide the three best bets: "
@@ -264,7 +283,7 @@ with tab2:
             except Exception as e:
                 st.error(f"Gemini Analysis error: {e}")
     elif not gemini_api_key:
-        st.info("Enter your QWERKY API key above to enable advanced analysis.")
+        st.info("Enter your Gemini API key above to enable advanced analysis.")
 
 # --- Tab 3: Team Commentary ---
 with tab3:
@@ -275,7 +294,7 @@ with tab3:
         f"<h4 style='color:{team_color};'>5 Reasons to Bet on {commentary_team} (Week {selected_week}):</h4>",
         unsafe_allow_html=True
     )
-    if st.button("Generate Commentary", key="generate_commentary") and gemini_api_key:
+    if st.button("Generate Commentary", key="generate_commentary") and gemini_api_key and gemini_model:
         prompt = (
             f"List and explain 5 compelling reasons, based on 15 years of NFL data and current week {selected_week} odds, "
             f"why betting on {commentary_team} is a strong choice for this week. Reference advanced trends, "
@@ -289,6 +308,6 @@ with tab3:
             except Exception as e:
                 st.error(f"Gemini Commentary error: {e}")
     elif not gemini_api_key:
-        st.info("Enter your QWERKY key above to enable commentary.")
+        st.info("Enter your Gemini API key above to enable commentary.")
 
 st.caption("Odds data provided by The Odds API. Advanced analysis powered by the QWERK engine.")

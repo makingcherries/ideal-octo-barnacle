@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import plotly.express as px
 import openai
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone  # <--- Added timezone here
 
 # --- Streamlit Theming (NFL Style) ---
 st.set_page_config(page_title="Welcome to the QWERK", layout="wide", initial_sidebar_state="expanded")
@@ -127,9 +127,10 @@ TEAM_COLORS = {
 }
 
 # --- Data Processing ---
+# HIGHLIGHTED CHANGE BELOW
 def get_approx_week(game_date):
-    # Approximate NFL week based on the start of September
-    season_start = datetime(CURRENT_YEAR, 9, 2)
+    # Approximate NFL week based on the start of September (UTC-aware)
+    season_start = datetime(CURRENT_YEAR, 9, 2, tzinfo=timezone.utc)  # <--- CHANGED: Added tzinfo=timezone.utc
     return 1 + ((game_date - season_start).days // 7)
 
 games_list = []
